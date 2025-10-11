@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "Nexus Mods Quick Download",
+  "version": "1.0",
+  "description": "Adds quick download buttons to Nexus Mods pages",
+  
+  "permissions": [
+    "https://www.nexusmods.com/*",
+    "webRequest",
+    "webRequestBlocking"
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": ["https://www.nexusmods.com/*/mods/*"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+  
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  
+  "web_accessible_resources": [
+    "injected.js"
+  ]
+}
