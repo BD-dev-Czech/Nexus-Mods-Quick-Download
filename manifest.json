@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
   "name": "Nexus Mods Quick Download",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Adds quick download buttons to Nexus Mods pages",
-  
+
   "permissions": [
     "https://www.nexusmods.com/*",
     "webRequest",
