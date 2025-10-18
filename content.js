@@ -469,77 +469,94 @@
     }
 
     async function resolveSingleFileId(filesUrl, container) {
-        try {
-            const response = await fetch(filesUrl);
-            const html = await response.text();
+    try {
+        const response = await fetch(filesUrl);
+        const html = await response.text();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        const allButtons = doc.querySelectorAll('a.btn[href*="file_id="], a.btn[href*="ModRequirementsPopUp"]');
+        const manualButtons = Array.from(allButtons).filter(button => {
+            const trackingData = button.getAttribute('data-tracking');
+            const buttonText = button.textContent.trim().toLowerCase();
+            const href = button.getAttribute('href') || '';
             
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const allButtons = doc.querySelectorAll('a.btn[href*="file_id="], a.btn[href*="ModRequirementsPopUp"]');
-            const manualButtons = Array.from(allButtons).filter(button => {
-                const trackingData = button.getAttribute('data-tracking');
-                return trackingData && trackingData.toLowerCase().includes('manual');
-            });
-            
-            if (manualButtons.length === 0) {
-                console.log('No manual download buttons found in resolved page');
-                return null;
-            }
-            
-            const firstManualButton = manualButtons[0];
-            const href = firstManualButton.getAttribute('href');
-            
-            const fileIdMatch = href.match(/file_id=(\d+)/);
-            if (fileIdMatch) {
-                return {
-                    fileId: fileIdMatch[1],
-                    needsNotification: false
-                };
-            }
-            
-            console.log('No direct file_id found, trying ModRequirementsPopUp fallback...');
-            const modIdMatch = href.match(/id=(\d+)/);
-            
-            if (modIdMatch) {
-                const fileId = modIdMatch[1];
-                console.log('Extracted file_id from ModRequirementsPopUp:', fileId);
-                
-                const gameId = getGameId();
-                if (gameId) {
-                    try {
-                        console.log('Making ModRequirementsPopUp request to verify file_id...');
-                        const requirementsInfo = await fetchFileInfoFromRequirementsPopup(fileId, gameId);
-                        console.log('ModRequirementsPopUp request successful, file_id verified');
-                        
-                        showRequirementsNotification(container, 'File 1', requirementsInfo.requirements);
-                        
-                        return {
-                            fileId: fileId,
-                            needsNotification: false
-                        };
-                    } catch (popupError) {
-                        console.log('ModRequirementsPopUp request failed, but proceeding with extracted file_id:', popupError.message);
-                        return {
-                            fileId: fileId,
-                            needsNotification: true
-                        };
-                    }
-                }
-                
-                return {
-                    fileId: fileId,
-                    needsNotification: true
-                };
-            }
-            
-            console.log('No file_id found in any manual download links on files page');
-            return null;
-        } catch (error) {
-            console.error('Error resolving file ID:', error);
+            return (trackingData && trackingData.toLowerCase().includes('manual')) ||
+                   buttonText.includes('manual') ||
+                   href.includes('file_id=');
+        });
+        
+        if (manualButtons.length === 0) {
+            console.log('No manual download buttons found in resolved page');
             return null;
         }
+        
+        const firstManualButton = manualButtons[0];
+        const href = firstManualButton.getAttribute('href');
+        
+        console.log('Found manual button with href:', href);
+        
+        const urlFileIdMatch = href.match(/[?&]file_id=(\d+)/);
+        if (urlFileIdMatch) {
+            console.log('Extracted file_id from URL parameter:', urlFileIdMatch[1]);
+            return {
+                fileId: urlFileIdMatch[1],
+                needsNotification: false
+            };
+        }
+        
+        const fileIdMatch = href.match(/file_id=(\d+)/);
+        if (fileIdMatch) {
+            console.log('Extracted file_id from path:', fileIdMatch[1]);
+            return {
+                fileId: fileIdMatch[1],
+                needsNotification: false
+            };
+        }
+        
+        console.log('No direct file_id found, trying ModRequirementsPopUp fallback...');
+        const modIdMatch = href.match(/id=(\d+)/);
+        
+        if (modIdMatch) {
+            const fileId = modIdMatch[1];
+            console.log('Extracted file_id from ModRequirementsPopUp:', fileId);
+            
+            const gameId = getGameId();
+            if (gameId) {
+                try {
+                    console.log('Making ModRequirementsPopUp request to verify file_id...');
+                    const requirementsInfo = await fetchFileInfoFromRequirementsPopup(fileId, gameId);
+                    console.log('ModRequirementsPopUp request successful, file_id verified');
+                    
+                    showRequirementsNotification(container, 'File 1', requirementsInfo.requirements);
+                    
+                    return {
+                        fileId: fileId,
+                        needsNotification: false
+                    };
+                } catch (popupError) {
+                    console.log('ModRequirementsPopUp request failed, but proceeding with extracted file_id:', popupError.message);
+                    return {
+                        fileId: fileId,
+                        needsNotification: true
+                    };
+                }
+            }
+            
+            return {
+                fileId: fileId,
+                needsNotification: true
+            };
+        }
+        
+        console.log('No file_id found in any manual download links on files page');
+        return null;
+    } catch (error) {
+        console.error('Error resolving file ID:', error);
+        return null;
     }
+}
 
     async function getModFiles(game, modId) {
         try {
@@ -911,5 +928,6 @@
             });
         }
     }
+
 
 })();
